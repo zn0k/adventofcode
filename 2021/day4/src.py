@@ -7,7 +7,7 @@ def chunks(lst, n):
 def assemble_board(lines):
     return [(int(x), False) for x in " ".join(lines).split() if x]
 
-with open("4-900-15.in", "r") as f:
+with open("input.txt", "r") as f:
     lines = [l.rstrip() for l in f]
     draws = map(int, lines[0].split(","))
     boards = [assemble_board(board) for board in chunks(lines[2:], lines[2:].index("") + 1)]
