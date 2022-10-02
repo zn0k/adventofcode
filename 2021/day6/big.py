@@ -1,6 +1,6 @@
 from collections import deque
 
-with open("input_test.txt", "r") as f:
+with open("input.txt", "r") as f:
     fish = [int(x) for x in f.readlines()[0].split(",")]
 
 # don't keep track of fish, keep track of how many fish 
@@ -27,4 +27,4 @@ def display(result):
 
 print(f"Solution 1: {solve(80)}")
 print(f"Solution 2: {solve(256)}")
-print(f"Solution big 1: {display(solve(999999))}")
+#print(f"Solution big 1: {display(solve(999999))}")

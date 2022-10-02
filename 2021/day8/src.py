@@ -10,7 +10,7 @@ for digit, value in digits.items():
     key = "".join(sorted([str(counts[c]) for c in value]))
     lookup[key] = digit
 
-with open("8-100000.in", "r") as f:
+with open("input.txt", "r") as f:
     signals = []
     for line in f:
         front, back = line.rstrip().split(" | ")

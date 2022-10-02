@@ -1,6 +1,6 @@
 from functools import partial, lru_cache 
 
-with open("input_test.txt", "r") as f:
+with open("input.txt", "r") as f:
     fish = [int(x) for x in f.readlines()[0].split(",")]
 
 @lru_cache
