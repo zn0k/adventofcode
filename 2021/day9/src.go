@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"sort"
 	"strconv"
 )
 
@@ -14,21 +15,39 @@ type Coordinate struct {
 
 type Neighbors []Coordinate
 
-type Point struct {
-	height    int
-	neighbors Neighbors
+type Map [][]int
+
+type Set struct {
+	m map[Coordinate]bool
 }
 
-type Map [][]Point
+func (s *Set) Add(v Coordinate) {
+	s.m[v] = true
+}
 
-func readLines(path string) ([][]int, error) {
+func (s *Set) Remove(v Coordinate) {
+	delete(s.m, v)
+}
+
+func (s *Set) Contains(v Coordinate) bool {
+	_, ok := s.m[v]
+	return ok
+}
+
+func NewSet() *Set {
+	s := &Set{}
+	s.m = make(map[Coordinate]bool)
+	return s
+}
+
+func readLines(path string) (Map, error) {
 	file, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
 	defer file.Close()
 
-	var points [][]int
+	var points Map
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
@@ -46,19 +65,20 @@ func readLines(path string) ([][]int, error) {
 	return points, scanner.Err()
 }
 
-func getNeighbors(c Coordinate, width int, height int) Neighbors {
+func getNeighbors(p Coordinate, m *Map) Neighbors {
+	width, height := getDimensions(m)
 	var neighbors Neighbors
-	if c.x > 0 {
-		neighbors = append(neighbors, Coordinate{c.x - 1, c.y})
+	if p.x > 0 {
+		neighbors = append(neighbors, Coordinate{p.x - 1, p.y})
 	}
-	if c.x < width {
-		neighbors = append(neighbors, Coordinate{c.x + 1, c.y})
+	if p.x < width {
+		neighbors = append(neighbors, Coordinate{p.x + 1, p.y})
 	}
-	if c.y > 0 {
-		neighbors = append(neighbors, Coordinate{c.x, c.y - 1})
+	if p.y > 0 {
+		neighbors = append(neighbors, Coordinate{p.x, p.y - 1})
 	}
-	if c.y < height {
-		neighbors = append(neighbors, Coordinate{c.x, c.y + 1})
+	if p.y < height {
+		neighbors = append(neighbors, Coordinate{p.x, p.y + 1})
 	}
 	return neighbors
 }
@@ -76,35 +96,63 @@ func minMax(xs []int) (int, int) {
 	return min, max
 }
 
+func getDimensions(m *Map) (int, int) {
+	height := len(*m) - 1
+	width := len((*m)[0]) - 1
+	return width, height
+}
+
+func getBasinSize(p Coordinate, m *Map) int {
+	seen := NewSet()
+	candidates := []Coordinate{p}
+	size := 0
+
+	for len(candidates) > 0 {
+		size += 1
+		next := candidates[0]
+		candidates = candidates[1:]
+		seen.Add(next)
+		for _, n := range getNeighbors(next, m) {
+			if !seen.Contains(n) && (*m)[n.y][n.x] != 9 {
+				candidates = append(candidates, n)
+				seen.Add(n)
+			}
+		}
+	}
+
+	return size
+}
+
 func main() {
 	points, err := readLines(os.Args[1])
 	if err != nil {
 		panic(err)
 	}
 
-	height := len(points) - 1
-	width := len(points[0]) - 1
-
 	var lowest []Coordinate
 	for y, row := range points {
 		for x, p := range row {
 			var heights []int
-			for _, n := range getNeighbors(Coordinate{x, y}, width, height) {
+			for _, n := range getNeighbors(Coordinate{x, y}, &points) {
 				heights = append(heights, points[n.y][n.x])
 			}
 			min, _ := minMax(heights)
-			if p <= min {
+			if p < min {
 				lowest = append(lowest, Coordinate{x, y})
 			}
 		}
 	}
 
-	//sum := 0
-	//for _, i := range lowest {
-	//	sum += i + 1
-	//}
+	sum := 0
+	basinSizes := []int{}
 	for _, p := range lowest {
-		fmt.Printf("%d,%d\n", p.x, p.y)
+		sum += points[p.y][p.x] + 1
+		basinSizes = append(basinSizes, getBasinSize(p, &points))
 	}
-	fmt.Printf("Solution 1: %v\n", lowest)
+	sort.Ints(basinSizes)
+	l := len(basinSizes)
+	solution2 := basinSizes[l-3] * basinSizes[l-2] * basinSizes[l-1]
+
+	fmt.Printf("Solution 1: %d\n", sum)
+	fmt.Printf("Solution 2: %d\n", solution2)
 }

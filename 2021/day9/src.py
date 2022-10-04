@@ -35,8 +35,6 @@ def get_point_height(point):
     return heightmap[point.y][point.x]
 
 low_points = get_low_points()
-for p in low_points:
-    print(f"{p.x},{p.y}")
 risk_levels = [get_point_height(p) + 1 for p in low_points]
 print(f"Solution 1: {sum(risk_levels)}")
 

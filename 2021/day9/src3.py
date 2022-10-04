@@ -8,7 +8,7 @@ class P(NamedTuple):
 
 offsets = [P(-1, 0), P(0, -1), P(1, 0), P(0, 1)]
 
-with open("9-4096-4.in", "r") as f:
+with open("input.txt", "r") as f:
     heightmap = [[int(c) for c in l.rstrip()] for l in f]
     height = len(heightmap)
     width = len(heightmap[0])
