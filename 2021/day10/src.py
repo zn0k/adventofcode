@@ -6,7 +6,7 @@ class Line(NamedTuple):
     penalty: int
     stack: deque
 
-with open("10-10000-10000.in", "r") as f:
+with open("input.txt", "r") as f:
     lines = [l.rstrip() for l in f]
 
 penalties = {")": 3, "]": 57, "}": 1197, ">": 25137}
