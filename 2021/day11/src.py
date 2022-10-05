@@ -1,7 +1,7 @@
 import numpy as np
 
 # read in the initial board
-board = np.genfromtxt("11-1000-2.in", dtype="i4", delimiter=1)
+board = np.genfromtxt("input.txt", dtype="i4", delimiter=1)
 height, width = board.shape
 ones = np.ones((height, width), dtype="i4")
 zeroes = np.zeros((height, width), dtype="i4")
