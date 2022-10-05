@@ -62,38 +62,37 @@ type Tracker struct {
 }
 
 func (t *Tracker) Add(v string) {
-	_, exists := t.t[v]
-	if exists {
-		t.t[v]++
-	} else {
-		t.t[v] = 1
-	}
+	t.t[v] = 1
 }
 
-func (t *Tracker) IsValid(v string, allowRepeat bool) bool {
+func (t *Tracker) IsValid(v string, allowRepeat bool) (bool, bool) {
+	//fmt.Printf("Tracker.IsValid(%v) on %v with allow repeat %v: ", v, t.t, allowRepeat)
 	first, _ := utf8.DecodeRuneInString(v)
 	small := unicode.IsLower(first)
-	_, exists := t.t[v]
-	if exists && small {
+	_, seen := t.t[v]
+	if seen && small {
 		if allowRepeat {
-			count := 0
-			for _, c := range t.t {
-				if c > 1 {
-					count++
-				}
-				if count > 1 {
-					return false
-				}
-			}
+			//fmt.Printf("allowing first repeat\n")
+			return true, false
 		} else {
-			return false
+			//fmt.Printf("small cave seen before\n")
+			return false, allowRepeat
 		}
 	}
-	return true
+	//fmt.Printf("cave is big or hasn't been seen before\n")
+	return true, allowRepeat
 }
 
 func (t *Tracker) Count() int {
 	return len(t.t)
+}
+
+func (t *Tracker) Copy() Tracker {
+	new := MakeTracker()
+	for k := range t.t {
+		new.Add(k)
+	}
+	return new
 }
 
 func MakeTracker() Tracker {
@@ -155,8 +154,9 @@ func printWorld(w *Map) {
 	}
 }
 
-func countPaths(c *Cave, t Tracker, allowRepeat bool) int {
-	//fmt.Printf("countPaths called for cave %s, tracker %v, allowRepeat %v\n", c.name, t, allowRepeat)
+func countPaths(c *Cave, t Tracker, allowRepeat bool, path string) int {
+	path += "-" + c.name
+	//fmt.Printf("countPaths called for cave %s, tracker %v, allowRepeat %v, path %s\n", c.name, t, allowRepeat, path)
 	paths := 0
 	if c.name == "end" {
 		//fmt.Printf("Found a valid path!\n")
@@ -166,14 +166,16 @@ func countPaths(c *Cave, t Tracker, allowRepeat bool) int {
 		//fmt.Printf("Aborting, back at start\n")
 		return 0
 	}
-	if !t.IsValid(c.name, allowRepeat) {
+	isValid, allowRepeat := t.IsValid(c.name, allowRepeat)
+	if !isValid {
 		//fmt.Printf("Have already been to cave too many time\n")
 		return 0
 	}
 	t.Add(c.name)
 	for _, n := range c.neighbors {
 		//fmt.Printf("processing neighbor %s\n", n.name)
-		paths += countPaths(n, t, allowRepeat)
+		nt := t.Copy()
+		paths += countPaths(n, nt, allowRepeat, path)
 	}
 	return paths
 }
@@ -183,7 +185,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	printWorld(&world)
-	fmt.Printf("Solution 1: %d\n", countPaths(world.Get("start"), MakeTracker(), false))
-	fmt.Printf("Solution 2: %d\n", countPaths(world.Get("start"), MakeTracker(), true))
+
+	fmt.Printf("Solution 1: %d\n", countPaths(world.Get("start"), MakeTracker(), false, ""))
+	fmt.Printf("Solution 2: %d\n", countPaths(world.Get("start"), MakeTracker(), true, ""))
 }
