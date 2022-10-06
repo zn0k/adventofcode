@@ -101,6 +101,8 @@ func printWorld(w *World) {
 
 func foldHorizontal(w *World, pos int) World {
 	top := (*w)[0:pos]
+	offset := len(*w) % 2
+	fmt.Printf("height is %d, offset is %d\n", len(*w), offset)
 	bottom := (*w)[pos+1:]
 	for i, j := 0, len(bottom)-1; i < j; i, j = i+1, j-1 {
 		bottom[i], bottom[j] = bottom[j], bottom[i]
@@ -118,6 +120,8 @@ func foldHorizontal(w *World, pos int) World {
 func foldVertical(w *World, pos int) World {
 	var left World
 	var right World
+	offset := len((*w)[0]) % 2
+	fmt.Printf("width is %d, offset is %d\n", len((*w)[0]), offset)
 	for y := 0; y < len(*w); y++ {
 		left = append(left, make([]bool, pos))
 		right = append(right, make([]bool, pos))
