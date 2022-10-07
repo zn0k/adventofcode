@@ -1,4 +1,4 @@
-module github.com/zn0k/adventofcode/aoc
+module github.com/zn0k/adventofcode/go-aoc/aoc
 
 go 1.19
 
