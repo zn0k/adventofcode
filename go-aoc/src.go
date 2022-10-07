@@ -59,3 +59,7 @@ func ToMatrix(input []string, separator string) *mat.Dense {
 	}
 	return mat.NewDense(height, width, values)
 }
+
+func main() {
+
+}
