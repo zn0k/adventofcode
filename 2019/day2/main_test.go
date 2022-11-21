@@ -1,3 +1,7 @@
 package main
 
-import "github.com/zn0k/adventofcode/tree/main/2019/intcode"
+import "testing"
+
+func TestDay2(t *testing.T) {
+
+}
