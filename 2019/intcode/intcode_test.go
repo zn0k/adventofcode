@@ -58,22 +58,26 @@ func TestIntCodeLoader(t *testing.T) {
 	}
 }
 
-func TestIntCodeADD(t *testing.T) {
-	test := []int64{1, 1, 1, 5, 99, 0}
-	ic := New()
-	ic.Load(programFromInts(test))
-	ic.Run()
-	if ic.Read(5) != 2 {
-		t.Errorf("Memory value at address 5 is not 2, got %d", ic.Read(5))
+func TestIntCodeDay2(t *testing.T) {
+	tests := []struct {
+		input         []int64
+		addr          int64
+		expectedValue int64
+	}{
+		{input: []int64{1, 9, 10, 3, 2, 3, 11, 0, 99, 30, 40, 50}, addr: 0, expectedValue: 3500},
+		{input: []int64{1, 0, 0, 0, 99}, addr: 0, expectedValue: 2},
+		{input: []int64{2, 3, 0, 3, 99}, addr: 3, expectedValue: 6},
+		{input: []int64{2, 4, 4, 5, 99, 0}, addr: 5, expectedValue: 9801},
+		{input: []int64{1, 1, 1, 4, 99, 5, 6, 0, 99}, addr: 0, expectedValue: 30},
 	}
-}
 
-func TestIntCodeMUL(t *testing.T) {
-	test := []int64{2, 2, 3, 5, 99, 0}
-	ic := New()
-	ic.Load(programFromInts(test))
-	ic.Run()
-	if ic.Read(5) != 6 {
-		t.Errorf("Memory value at address 5 is not 6, got %d", ic.Read(5))
+	for _, tt := range tests {
+		ic := New()
+		ic.Load(programFromInts(tt.input))
+		ic.Run()
+
+		if ic.Read(tt.addr) != tt.expectedValue {
+			t.Errorf("Memory value at address %d is not %d, got %d", tt.addr, tt.expectedValue, ic.Read(tt.addr))
+		}
 	}
 }

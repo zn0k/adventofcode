@@ -14,6 +14,12 @@ const (
 	RELATIVE  int64 = 2
 )
 
+const (
+	ADD int64 = 1
+	MUL int64 = 2
+	HLT int64 = 99
+)
+
 type IntCodeMemory map[int64]int64
 
 type IntCodeComputer struct {
@@ -23,7 +29,6 @@ type IntCodeComputer struct {
 }
 
 type OpCode interface {
-	Code() int64
 	Execute(ic *IntCodeComputer)
 }
 
@@ -33,9 +38,9 @@ type genericOpCode struct {
 	paramModes []int64
 }
 
-type ADD genericOpCode
-type MUL genericOpCode
-type HLT genericOpCode
+type Add genericOpCode
+type Mul genericOpCode
+type Hlt genericOpCode
 
 func New() *IntCodeComputer {
 	ic := &IntCodeComputer{instructionPointer: 0, relativeBasePointer: 0}
@@ -69,14 +74,14 @@ func (ic *IntCodeComputer) Write(addr, val int64) {
 }
 
 func (ic *IntCodeComputer) Run() {
-	op := ic.parseOpCode()
-	for op.Code() != 99 {
+	op, code := ic.parseOpCode()
+	for code != 99 {
 		op.Execute(ic)
-		op = ic.parseOpCode()
+		op, code = ic.parseOpCode()
 	}
 }
 
-func (ic *IntCodeComputer) parseOpCode() OpCode {
+func (ic *IntCodeComputer) parseOpCode() (OpCode, int64) {
 	val := ic.Read(ic.instructionPointer)
 	opModeA := val / 10000
 	opModeB := val / 1000
@@ -84,23 +89,23 @@ func (ic *IntCodeComputer) parseOpCode() OpCode {
 	opCode := val - (10000 * opModeA) - (1000 * opModeB) - (100 * opModeC)
 	switch opCode {
 	case 1:
-		return &ADD{
+		return &Add{
 			code:       1,
 			params:     3,
 			paramModes: []int64{opModeC, opModeB, opModeA},
-		}
+		}, ADD
 	case 2:
-		return &MUL{
+		return &Mul{
 			code:       2,
 			params:     3,
 			paramModes: []int64{opModeC, opModeB, opModeA},
-		}
+		}, MUL
 	case 99:
-		return &HLT{
+		return &Hlt{
 			code:       99,
 			params:     0,
 			paramModes: []int64{},
-		}
+		}, HLT
 	default:
 		panic(fmt.Sprintf("Unknown op code %d with parameter modes (%d, %d, %d)", opCode, opModeC, opModeB, opModeA))
 	}
@@ -108,32 +113,34 @@ func (ic *IntCodeComputer) parseOpCode() OpCode {
 
 func (ic *IntCodeComputer) readParameter(addr int64, mode int64) int64 {
 	switch mode {
-	case 0:
+	case POSITION:
+		return ic.Read(ic.Read(addr))
+	case IMMEDIATE:
 		return ic.Read(addr)
-	case 1:
-		return addr
-	case 2:
+	case RELATIVE:
 		return ic.Read(ic.relativeBasePointer + addr)
 	default:
 		panic(fmt.Sprintf("Unknown parameter mode %d", mode))
 	}
 }
 
-func (op *ADD) Code() int64 { return op.code }
-func (op *ADD) Execute(ic *IntCodeComputer) {
+func (op *Add) Code() int64 { return op.code }
+func (op *Add) Execute(ic *IntCodeComputer) {
 	left := ic.readParameter(ic.instructionPointer+1, op.paramModes[0])
 	right := ic.readParameter(ic.instructionPointer+2, op.paramModes[1])
-	ic.Write(ic.readParameter(ic.instructionPointer+3, op.paramModes[2]), left+right)
+	writeAddr := ic.Read(ic.instructionPointer + 3)
+	ic.Write(writeAddr, left+right)
 	ic.instructionPointer = ic.instructionPointer + 4
 }
 
-func (op *MUL) Code() int64 { return op.code }
-func (op *MUL) Execute(ic *IntCodeComputer) {
+func (op *Mul) Code() int64 { return op.code }
+func (op *Mul) Execute(ic *IntCodeComputer) {
 	left := ic.readParameter(ic.instructionPointer+1, op.paramModes[0])
 	right := ic.readParameter(ic.instructionPointer+2, op.paramModes[1])
-	ic.Write(ic.readParameter(ic.instructionPointer+3, op.paramModes[2]), left*right)
+	writeAddr := ic.Read(ic.instructionPointer + 3)
+	ic.Write(writeAddr, left*right)
 	ic.instructionPointer = ic.instructionPointer + 4
 }
 
-func (op *HLT) Code() int64                 { return op.code }
-func (op *HLT) Execute(ic *IntCodeComputer) {}
+func (op *Hlt) Code() int64                 { return op.code }
+func (op *Hlt) Execute(ic *IntCodeComputer) {}
