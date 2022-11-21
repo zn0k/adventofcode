@@ -17,6 +17,12 @@ const (
 const (
 	ADD int64 = 1
 	MUL int64 = 2
+	PSH int64 = 3
+	POP int64 = 4
+	JNZ int64 = 5
+	JEZ int64 = 6
+	CLT int64 = 7
+	CMP int64 = 8
 	HLT int64 = 99
 )
 
@@ -26,6 +32,8 @@ type IntCodeComputer struct {
 	memory              IntCodeMemory
 	instructionPointer  int64
 	relativeBasePointer int64
+	input               chan int64
+	output              chan int64
 }
 
 type OpCode interface {
@@ -41,10 +49,18 @@ type genericOpCode struct {
 type Add genericOpCode
 type Mul genericOpCode
 type Hlt genericOpCode
+type Psh genericOpCode
+type Pop genericOpCode
+type Jnz genericOpCode
+type Jez genericOpCode
+type Clt genericOpCode
+type Cmp genericOpCode
 
-func New() *IntCodeComputer {
+func New(in chan int64, out chan int64) *IntCodeComputer {
 	ic := &IntCodeComputer{instructionPointer: 0, relativeBasePointer: 0}
 	ic.memory = make(IntCodeMemory)
+	ic.input = in
+	ic.output = out
 	return ic
 }
 
@@ -75,32 +91,72 @@ func (ic *IntCodeComputer) Write(addr, val int64) {
 
 func (ic *IntCodeComputer) Run() {
 	op, code := ic.parseOpCode()
-	for code != 99 {
+	for code != HLT {
 		op.Execute(ic)
 		op, code = ic.parseOpCode()
 	}
+	// execute the HLT op
+	op.Execute(ic)
 }
 
 func (ic *IntCodeComputer) parseOpCode() (OpCode, int64) {
 	val := ic.Read(ic.instructionPointer)
 	opModeA := val / 10000
+	val = val - (10000 * opModeA)
 	opModeB := val / 1000
+	val = val - (1000 * opModeB)
 	opModeC := val / 100
-	opCode := val - (10000 * opModeA) - (1000 * opModeB) - (100 * opModeC)
+	opCode := val - (100 * opModeC)
 	switch opCode {
-	case 1:
+	case ADD:
 		return &Add{
 			code:       1,
 			params:     3,
 			paramModes: []int64{opModeC, opModeB, opModeA},
 		}, ADD
-	case 2:
+	case MUL:
 		return &Mul{
 			code:       2,
 			params:     3,
 			paramModes: []int64{opModeC, opModeB, opModeA},
 		}, MUL
-	case 99:
+	case PSH:
+		return &Psh{
+			code:       3,
+			params:     1,
+			paramModes: []int64{opModeC},
+		}, PSH
+	case POP:
+		return &Pop{
+			code:       4,
+			params:     1,
+			paramModes: []int64{opModeC},
+		}, POP
+	case JNZ:
+		return &Jnz{
+			code:       5,
+			params:     2,
+			paramModes: []int64{opModeC, opModeB},
+		}, JNZ
+	case JEZ:
+		return &Jez{
+			code:       6,
+			params:     2,
+			paramModes: []int64{opModeC, opModeB},
+		}, JEZ
+	case CLT:
+		return &Clt{
+			code:       7,
+			params:     3,
+			paramModes: []int64{opModeC, opModeB, opModeA},
+		}, CLT
+	case CMP:
+		return &Cmp{
+			code:       8,
+			params:     3,
+			paramModes: []int64{opModeC, opModeB, opModeA},
+		}, CMP
+	case HLT:
 		return &Hlt{
 			code:       99,
 			params:     0,
@@ -124,7 +180,6 @@ func (ic *IntCodeComputer) readParameter(addr int64, mode int64) int64 {
 	}
 }
 
-func (op *Add) Code() int64 { return op.code }
 func (op *Add) Execute(ic *IntCodeComputer) {
 	left := ic.readParameter(ic.instructionPointer+1, op.paramModes[0])
 	right := ic.readParameter(ic.instructionPointer+2, op.paramModes[1])
@@ -133,7 +188,6 @@ func (op *Add) Execute(ic *IntCodeComputer) {
 	ic.instructionPointer = ic.instructionPointer + 4
 }
 
-func (op *Mul) Code() int64 { return op.code }
 func (op *Mul) Execute(ic *IntCodeComputer) {
 	left := ic.readParameter(ic.instructionPointer+1, op.paramModes[0])
 	right := ic.readParameter(ic.instructionPointer+2, op.paramModes[1])
@@ -142,5 +196,61 @@ func (op *Mul) Execute(ic *IntCodeComputer) {
 	ic.instructionPointer = ic.instructionPointer + 4
 }
 
-func (op *Hlt) Code() int64                 { return op.code }
-func (op *Hlt) Execute(ic *IntCodeComputer) {}
+func (op *Hlt) Execute(ic *IntCodeComputer) {
+	close(ic.output)
+}
+
+func (op *Psh) Execute(ic *IntCodeComputer) {
+	writeAddr := ic.Read(ic.instructionPointer + 1)
+	val := <-ic.input
+	ic.Write(writeAddr, val)
+	ic.instructionPointer = ic.instructionPointer + 2
+}
+
+func (op *Pop) Execute(ic *IntCodeComputer) {
+	val := ic.readParameter(ic.instructionPointer+1, op.paramModes[0])
+	ic.output <- val
+	ic.instructionPointer = ic.instructionPointer + 2
+}
+
+func (op *Jnz) Execute(ic *IntCodeComputer) {
+	val := ic.readParameter(ic.instructionPointer+1, op.paramModes[0])
+	if val != 0 {
+		ic.instructionPointer = ic.readParameter(ic.instructionPointer+2, op.paramModes[1])
+	} else {
+		ic.instructionPointer = ic.instructionPointer + 3
+	}
+}
+
+func (op *Jez) Execute(ic *IntCodeComputer) {
+	val := ic.readParameter(ic.instructionPointer+1, op.paramModes[0])
+	if val == 0 {
+		ic.instructionPointer = ic.readParameter(ic.instructionPointer+2, op.paramModes[1])
+	} else {
+		ic.instructionPointer = ic.instructionPointer + 3
+	}
+}
+
+func (op *Clt) Execute(ic *IntCodeComputer) {
+	left := ic.readParameter(ic.instructionPointer+1, op.paramModes[0])
+	right := ic.readParameter(ic.instructionPointer+2, op.paramModes[1])
+	writeAddr := ic.Read(ic.instructionPointer + 3)
+	if left < right {
+		ic.Write(writeAddr, 1)
+	} else {
+		ic.Write(writeAddr, 0)
+	}
+	ic.instructionPointer = ic.instructionPointer + 4
+}
+
+func (op *Cmp) Execute(ic *IntCodeComputer) {
+	left := ic.readParameter(ic.instructionPointer+1, op.paramModes[0])
+	right := ic.readParameter(ic.instructionPointer+2, op.paramModes[1])
+	writeAddr := ic.Read(ic.instructionPointer + 3)
+	if left == right {
+		ic.Write(writeAddr, 1)
+	} else {
+		ic.Write(writeAddr, 0)
+	}
+	ic.instructionPointer = ic.instructionPointer + 4
+}

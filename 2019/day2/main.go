@@ -14,7 +14,9 @@ func main() {
 	}
 	s := string(buf)
 
-	ic := intcode.New()
+	in := make(chan int64, 2)
+	out := make(chan int64, 2)
+	ic := intcode.New(in, out)
 	ic.Load(strings.NewReader(s))
 	ic.Write(1, 12)
 	ic.Write(2, 2)
@@ -24,7 +26,9 @@ func main() {
 BREAK:
 	for noun := int64(0); noun <= 99; noun++ {
 		for verb := int64(0); verb <= 99; verb++ {
-			ic = intcode.New()
+			in = make(chan int64, 2)
+			out = make(chan int64, 2)
+			ic = intcode.New(in, out)
 			ic.Load(strings.NewReader(s))
 			ic.Write(1, noun)
 			ic.Write(2, verb)
