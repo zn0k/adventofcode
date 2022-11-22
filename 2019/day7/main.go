@@ -5,6 +5,8 @@ import (
 	"intcode"
 	"io/ioutil"
 	"strings"
+
+	"gonum.org/v1/gonum/stat/combin"
 )
 
 func runSequence(program string, sequence []int64) int64 {
@@ -24,27 +26,31 @@ func runSequence(program string, sequence []int64) int64 {
 	icA := intcode.New(inA, outA)
 	icA.Load(strings.NewReader(program))
 	inA <- 0
-	icA.Run()
+	go icA.Run()
 
 	icB := intcode.New(outA, outB)
 	icB.Load(strings.NewReader(program))
-	icB.Run()
+	go icB.Run()
 
 	icC := intcode.New(outB, outC)
 	icC.Load(strings.NewReader(program))
-	icC.Run()
+	go icC.Run()
 
 	icD := intcode.New(outC, outD)
 	icD.Load(strings.NewReader(program))
-	icD.Run()
+	go icD.Run()
 
 	icE := intcode.New(outD, outE)
 	icE.Load(strings.NewReader(program))
-	icE.Run()
+	go icE.Run()
 
-	result := <-outE
+	var last int64
+	for result := range outE {
+		last = result
+		inA <- result
+	}
 
-	return result
+	return last
 }
 
 func main() {
@@ -54,7 +60,26 @@ func main() {
 	}
 	s := string(buf)
 
-	// loop through all permnutations, find highest result
-	result := runSequence(s, []int64{4, 3, 2, 1, 0})
-	fmt.Println(result)
+	sequence := []int64{0, 1, 2, 3, 4}
+	sequence2 := []int64{5, 6, 7, 8, 9}
+	var solution1 int64 = 0
+	var solution2 int64 = 0
+	for _, c := range combin.Permutations(5, 5) {
+		var instance1 []int64
+		var instance2 []int64
+		for _, i := range c {
+			instance1 = append(instance1, sequence[i])
+			instance2 = append(instance2, sequence2[i])
+		}
+		result1 := runSequence(s, instance1)
+		if result1 > solution1 {
+			solution1 = result1
+		}
+		result2 := runSequence(s, instance2)
+		if result2 > solution2 {
+			solution2 = result2
+		}
+	}
+	fmt.Printf("Solution 1: %d\n", solution1)
+	fmt.Printf("Solution 2: %d\n", solution2)
 }

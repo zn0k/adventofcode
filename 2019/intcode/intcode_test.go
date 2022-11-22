@@ -181,3 +181,45 @@ func TestIntCodeDay5Part2(t *testing.T) {
 		}
 	}
 }
+
+func TestIntCodeDay9(t *testing.T) {
+	test := []int64{104, 1125899906842624, 99}
+	in := make(chan int64, 2)
+	out := make(chan int64, 2)
+	ic := New(in, out)
+	ic.Load(programFromInts(test))
+	ic.Run()
+	result := <-out
+
+	if result != 1125899906842624 {
+		t.Errorf("Returned value is not %d, got %d", 1125899906842624, result)
+	}
+
+	test = []int64{1102, 34915192, 34915192, 7, 4, 7, 99, 0}
+	in = make(chan int64, 2)
+	out = make(chan int64, 2)
+	ic = New(in, out)
+	ic.Load(programFromInts(test))
+	ic.Run()
+	result = <-out
+
+	if len(strconv.FormatInt(result, 10)) != 16 {
+		t.Errorf("Returned value does not have 16 digits, got %d", result)
+	}
+
+	test = []int64{109, 1, 204, -1, 1001, 100, 1, 100, 1008, 100, 16, 101, 1006, 101, 0, 99}
+	in = make(chan int64, 2)
+	out = make(chan int64, 2)
+	ic = New(in, out)
+	ic.Load(programFromInts(test))
+	go ic.Run()
+	var quine []int64
+	for r := range out {
+		quine = append(quine, r)
+	}
+	for i, v := range test {
+		if quine[i] != v {
+			t.Errorf("Returned quine value at index %d is not %d, got %d", i, test[i], quine[i])
+		}
+	}
+}

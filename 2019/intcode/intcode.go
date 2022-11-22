@@ -23,6 +23,7 @@ const (
 	JEZ int64 = 6
 	CLT int64 = 7
 	CMP int64 = 8
+	ADJ int64 = 9
 	HLT int64 = 99
 )
 
@@ -55,6 +56,7 @@ type Jnz genericOpCode
 type Jez genericOpCode
 type Clt genericOpCode
 type Cmp genericOpCode
+type Adj genericOpCode
 
 func New(in chan int64, out chan int64) *IntCodeComputer {
 	ic := &IntCodeComputer{instructionPointer: 0, relativeBasePointer: 0}
@@ -82,7 +84,11 @@ func (ic *IntCodeComputer) Load(in io.Reader) {
 }
 
 func (ic *IntCodeComputer) Read(addr int64) int64 {
-	return ic.memory[addr]
+	val, ok := ic.memory[addr]
+	if !ok {
+		return 0
+	}
+	return val
 }
 
 func (ic *IntCodeComputer) Write(addr, val int64) {
@@ -156,6 +162,12 @@ func (ic *IntCodeComputer) parseOpCode() (OpCode, int64) {
 			params:     3,
 			paramModes: []int64{opModeC, opModeB, opModeA},
 		}, CMP
+	case ADJ:
+		return &Adj{
+			code:       9,
+			params:     1,
+			paramModes: []int64{opModeC},
+		}, ADJ
 	case HLT:
 		return &Hlt{
 			code:       99,
@@ -174,7 +186,20 @@ func (ic *IntCodeComputer) readParameter(addr int64, mode int64) int64 {
 	case IMMEDIATE:
 		return ic.Read(addr)
 	case RELATIVE:
-		return ic.Read(ic.relativeBasePointer + addr)
+		return ic.Read(ic.relativeBasePointer + ic.Read(addr))
+	default:
+		panic(fmt.Sprintf("Unknown parameter mode %d", mode))
+	}
+}
+
+func (ic *IntCodeComputer) getWriteParameter(addr int64, mode int64) int64 {
+	switch mode {
+	case POSITION:
+		return ic.Read(addr)
+	case IMMEDIATE:
+		return ic.Read(addr)
+	case RELATIVE:
+		return ic.Read(addr) + ic.relativeBasePointer
 	default:
 		panic(fmt.Sprintf("Unknown parameter mode %d", mode))
 	}
@@ -183,7 +208,7 @@ func (ic *IntCodeComputer) readParameter(addr int64, mode int64) int64 {
 func (op *Add) Execute(ic *IntCodeComputer) {
 	left := ic.readParameter(ic.instructionPointer+1, op.paramModes[0])
 	right := ic.readParameter(ic.instructionPointer+2, op.paramModes[1])
-	writeAddr := ic.Read(ic.instructionPointer + 3)
+	writeAddr := ic.getWriteParameter(ic.instructionPointer+3, op.paramModes[2])
 	ic.Write(writeAddr, left+right)
 	ic.instructionPointer = ic.instructionPointer + 4
 }
@@ -191,7 +216,7 @@ func (op *Add) Execute(ic *IntCodeComputer) {
 func (op *Mul) Execute(ic *IntCodeComputer) {
 	left := ic.readParameter(ic.instructionPointer+1, op.paramModes[0])
 	right := ic.readParameter(ic.instructionPointer+2, op.paramModes[1])
-	writeAddr := ic.Read(ic.instructionPointer + 3)
+	writeAddr := ic.getWriteParameter(ic.instructionPointer+3, op.paramModes[2])
 	ic.Write(writeAddr, left*right)
 	ic.instructionPointer = ic.instructionPointer + 4
 }
@@ -201,8 +226,8 @@ func (op *Hlt) Execute(ic *IntCodeComputer) {
 }
 
 func (op *Psh) Execute(ic *IntCodeComputer) {
-	writeAddr := ic.Read(ic.instructionPointer + 1)
 	val := <-ic.input
+	writeAddr := ic.getWriteParameter(ic.instructionPointer+1, op.paramModes[0])
 	ic.Write(writeAddr, val)
 	ic.instructionPointer = ic.instructionPointer + 2
 }
@@ -234,7 +259,7 @@ func (op *Jez) Execute(ic *IntCodeComputer) {
 func (op *Clt) Execute(ic *IntCodeComputer) {
 	left := ic.readParameter(ic.instructionPointer+1, op.paramModes[0])
 	right := ic.readParameter(ic.instructionPointer+2, op.paramModes[1])
-	writeAddr := ic.Read(ic.instructionPointer + 3)
+	writeAddr := ic.getWriteParameter(ic.instructionPointer+3, op.paramModes[2])
 	if left < right {
 		ic.Write(writeAddr, 1)
 	} else {
@@ -246,11 +271,17 @@ func (op *Clt) Execute(ic *IntCodeComputer) {
 func (op *Cmp) Execute(ic *IntCodeComputer) {
 	left := ic.readParameter(ic.instructionPointer+1, op.paramModes[0])
 	right := ic.readParameter(ic.instructionPointer+2, op.paramModes[1])
-	writeAddr := ic.Read(ic.instructionPointer + 3)
+	writeAddr := ic.getWriteParameter(ic.instructionPointer+3, op.paramModes[2])
 	if left == right {
 		ic.Write(writeAddr, 1)
 	} else {
 		ic.Write(writeAddr, 0)
 	}
 	ic.instructionPointer = ic.instructionPointer + 4
+}
+
+func (op *Adj) Execute(ic *IntCodeComputer) {
+	val := ic.readParameter(ic.instructionPointer+1, op.paramModes[0])
+	ic.relativeBasePointer += val
+	ic.instructionPointer = ic.instructionPointer + 2
 }
