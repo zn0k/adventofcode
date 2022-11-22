@@ -8,9 +8,12 @@ import (
 	"strings"
 )
 
+// custom type to represent a board
 type Board struct {
+	// 2-dimensional array of ints to represent the board state
 	board [][]int
-	won   bool
+	// mark whether the board has been won
+	won bool
 }
 
 func readLines(path string) ([]int, []Board, error) {
