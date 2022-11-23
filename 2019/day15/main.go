@@ -21,26 +21,38 @@ type Point struct {
 	x, y int64
 }
 
-type Floorplan map[Point]int64
+type Floorplan map[int64]map[int64]int64
 
 type Robot struct {
-	position Point
+	position  Point
+	floorplan Floorplan
+}
+
+func NewRobot() *Robot {
+	r := &Robot{position: Point{0, 0}}
+	r.floorplan = make(Floorplan)
+	return r
 }
 
 func (r *Robot) Move(direction int64, in chan int64, out chan int64) int64 {
+	proposed_position := Point{r.position.x, r.position.y}
+	switch direction {
+	case NORTH:
+		proposed_position.y++
+	case SOUTH:
+		proposed_position.y--
+	case EAST:
+		proposed_position.x++
+	case WEST:
+		proposed_position.x--
+	}
+
 	in <- direction
 	result := <-out
+	r.floorplan[proposed_position.x][proposed_position.y] = result
+
 	if result != WALL {
-		switch direction {
-		case NORTH:
-			r.position.y++
-		case SOUTH:
-			r.position.y--
-		case WEST:
-			r.position.x--
-		case EAST:
-			r.position.x++
-		}
+		r.position = proposed_position
 	}
 	return result
 }
@@ -58,8 +70,7 @@ func main() {
 	ic := intcode.New(in, out)
 	ic.Load(strings.NewReader(program))
 
-	floorplan := make(Floorplan)
-	robot := Robot{Point{0, 0}}
+	robot := NewRobot()
 
 	go ic.Run()
 
