@@ -1,31 +1,9 @@
 package main
 
 import (
+	"strings"
 	"testing"
 )
-
-func TestPatternGeneration(t *testing.T) {
-	tests := []struct {
-		length   int
-		element  int
-		expected []int
-	}{
-		{
-			length: 8, element: 0, expected: []int{1, 0, -1, 0, 1, 0, -1, 0},
-		},
-		{
-			length: 8, element: 1, expected: []int{0, 1, 1, 0, 0, -1, -1, 0},
-		},
-		{
-			length: 8, element: 2, expected: []int{0, 0, 1, 1, 1, 0, 0, 0},
-		},
-	}
-
-	for _, tt := range tests {
-		result := GeneratePattern(tt.length, tt.element)
-		compareIntLists(t, result, tt.expected)
-	}
-}
 
 func compareIntLists(t *testing.T, a, b []int) bool {
 	if len(a) != len(b) {
@@ -85,8 +63,32 @@ func TestProcess(t *testing.T) {
 
 	for _, tt := range tests {
 		signal := StringToSlice(tt.in)
-		patterns := GeneratePatterns(len(signal))
-		result := Process(signal, patterns, tt.iterations)
+		result := Process(signal, tt.iterations)
+		compareIntLists(t, result, tt.out)
+	}
+}
+
+func TestProcess2(t *testing.T) {
+	tests := []struct {
+		in         string
+		iterations int
+		out        []int
+	}{
+		{
+			in: "03036732577212944063491565474664", iterations: 100, out: []int{8, 4, 4, 6, 2, 0, 2, 6},
+		},
+		{
+			in: "02935109699940807407585447034323", iterations: 100, out: []int{7, 8, 7, 2, 5, 2, 7, 0},
+		},
+		{
+			in: "03081770884921959731165446850517", iterations: 100, out: []int{5, 3, 5, 5, 3, 7, 3, 1},
+		},
+	}
+
+	for _, tt := range tests {
+		input := strings.Repeat(tt.in, 10000)
+		signal := StringToSlice(input)
+		result := Process2(signal, tt.iterations)
 		compareIntLists(t, result, tt.out)
 	}
 }
