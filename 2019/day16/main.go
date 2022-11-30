@@ -5,25 +5,8 @@ import (
 	"io/ioutil"
 	"math"
 	"strconv"
+	"strings"
 )
-
-func GeneratePattern(length int, element int) []int {
-	base := []int{0, 1, 0, -1}
-	result := make([]int, length+1)
-	for i := 0; i < len(result); i++ {
-		result[i] = base[(i/(element+1))%len(base)]
-	}
-	return result[1:]
-}
-
-func GeneratePatterns(length int) [][]int {
-	var result [][]int
-	for i := 0; i < length; i++ {
-		row := GeneratePattern(length, i)
-		result = append(result, row)
-	}
-	return result
-}
 
 func StringToSlice(s string) []int {
 	result := make([]int, len(s))
@@ -37,23 +20,41 @@ func StringToSlice(s string) []int {
 	return result
 }
 
-func Process(signal []int, patterns [][]int, iterations int) []int {
-	result := make([]int, len(signal))
+func Process(signal []int, iterations int) []int {
+	l := len(signal)
+	temp := make([]int, l)
 
 	for iteration := 0; iteration < iterations; iteration++ {
-		for digit := 0; digit < len(signal); digit++ {
+		for digit := 0; digit < l; digit++ {
 			sum := 0
-			for i := 0; i < len(signal); i++ {
-				sum += signal[i] * patterns[digit][i]
+			index := digit
+			for index < l {
+				for i := 0; i <= digit; i++ {
+					if index+i >= l {
+						break
+					}
+					sum += signal[index+i]
+				}
+				index += (digit + 1) * 4
 			}
-			result[digit] = int(math.Abs(float64(sum))) % 10
+			index = digit + (2 * (digit + 1))
+			for index < l {
+				for i := 0; i <= digit; i++ {
+					if index+i >= l {
+						break
+					}
+					sum -= signal[index+i]
+				}
+				index += (digit + 1) * 4
+			}
+			temp[digit] = int(math.Abs(float64(sum))) % 10
 		}
-		signal = result
+		signal = temp
 	}
-	if len(result) > 8 {
-		return result[0:8]
+	if len(signal) > 8 {
+		return signal[0:8]
 	} else {
-		return result
+		return signal
 	}
 }
 
@@ -70,9 +71,45 @@ func main() {
 	if err != nil {
 		panic("unable to open input.txt")
 	}
-	signal := StringToSlice(string(buf))
-	patterns := GeneratePatterns(len(signal))
-
-	result := Process(signal, patterns, 100)
+	input_string := string(buf)
+	signal := StringToSlice(input_string)
+	result := Process(signal, 100)
 	fmt.Printf("Solution 1: %s\n", Stringify(result))
+
+	input_string = strings.Repeat(input_string, 10000)
+	signal = StringToSlice(input_string)
+	result = Process2(signal, 100)
+	fmt.Printf("Solution 2: %s\n", Stringify(result))
+}
+
+func Process2(signal []int, iterations int) []int {
+	l := len(signal)
+	temp := make([]int, l)
+
+	// calculate the offset based on the first 7 digits
+	offset := 0
+	for i := 0; i < 7; i++ {
+		offset += (signal[i] * int(math.Pow10(7-i-1)))
+	}
+
+	// sum up digits from the end. this won't let us get the whole signal
+	// it will, however, let us get the last half of them for each iteration
+	// that's because the filter pattern at the half way point is 0...01...1
+	// the last filter is 0...01, so the last digit is the same as from the input
+	// the second to last is the new last digit + the second to last signal digit mod 10
+	// the third to last is the previous sum plus the third to last from the signal mod 10, and so on
+
+	// the offset is in the second half, so this works
+	for i := 0; i < iterations; i++ {
+		sum := signal[l-1]
+		temp[l-1] = sum
+		for digit := l - 2; digit >= l/2; digit-- {
+			sum += signal[digit]
+			d := sum % 10
+			temp[digit] = d
+		}
+		signal = temp
+	}
+
+	return signal[offset : offset+8]
 }
