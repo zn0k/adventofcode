@@ -1,29 +1,28 @@
 package main
 
 import (
-	"bufio"
 	"container/list"
 	"fmt"
+	"io/ioutil"
+	"math"
 	"os"
+	"strings"
 	"unicode"
 )
 
-func ReadInput(path string) *list.List {
-	f, err := os.Open(path)
+func ReadInput(path string) string {
+	buf, err := ioutil.ReadFile(path)
 	if err != nil {
-		panic(fmt.Sprintf("unable to open '%s' for reading", path))
+		panic(fmt.Sprintf("unable to read '%s'", path))
 	}
-	defer f.Close()
+	return strings.TrimSpace(string(buf))
+}
 
+func MakeList(input string) *list.List {
 	polymer := list.New()
-
-	scanner := bufio.NewScanner(f)
-	scanner.Split(bufio.ScanRunes)
-	for scanner.Scan() {
-		unit := scanner.Text()
-		polymer.PushBack(unit)
+	for _, unit := range input {
+		polymer.PushBack(string(unit))
 	}
-
 	return polymer
 }
 
@@ -70,16 +69,55 @@ func React(p *list.List) {
 	}
 }
 
-func PrintPolymer(p *list.List) string {
-	result := ""
-	for e := p.Front(); e != nil; e = e.Next() {
-		result += e.Value.(string)
+func GetElements(p *list.List) []rune {
+	lookup := make(map[rune]bool)
+	for e := p.Front(); e.Next() != nil; e = e.Next() {
+		value := e.Value.(string)
+		letter := unicode.ToLower(rune(value[0]))
+		lookup[letter] = true
 	}
+
+	var result []rune
+	for letter, _ := range lookup {
+		result = append(result, letter)
+	}
+
 	return result
 }
 
+func RemoveUnit(p *list.List, lowerCase rune) {
+	upperCase := unicode.ToUpper(lowerCase)
+	for e := p.Front(); e.Next() != nil; {
+		if e.Value == string(lowerCase) || e.Value == string(upperCase) {
+			if e == p.Front() {
+				p.Remove(e)
+				e = p.Front()
+			} else {
+				prev := e.Prev()
+				p.Remove(e)
+				e = prev
+			}
+		} else {
+			e = e.Next()
+		}
+	}
+}
+
 func main() {
-	polymer := ReadInput(os.Args[1])
+	input := ReadInput(os.Args[1])
+	polymer := MakeList(input)
 	React(polymer)
 	fmt.Printf("Solution 1: %d\n", polymer.Len())
+
+	elements := GetElements(polymer)
+	minimum := math.MaxInt32
+	for _, elem := range elements {
+		polymer = MakeList(input)
+		RemoveUnit(polymer, elem)
+		React(polymer)
+		if polymer.Len() < minimum {
+			minimum = polymer.Len()
+		}
+	}
+	fmt.Printf("Solution 2: %d\n", minimum)
 }
