@@ -21,57 +21,55 @@ const (
 	MUST_WIN  = 3
 )
 
-type Shape int
-
 type Game struct {
-	You      Shape
-	Opponent Shape
+	You      int
+	Opponent int
 }
 
 type Games []Game
 
+// calculate the shape that beats the opponent
+func (g *Game) Win() int {
+	result := g.Opponent + 1
+	if result > SCISSORS {
+		result = ROCK
+	}
+	return result
+}
+
+// calculate the shape that loses to the opponent
+func (g *Game) Lose() int {
+	result := g.Opponent - 1
+	if result < ROCK {
+		result = SCISSORS
+	}
+	return result
+}
+
+// calculate the shape that draws with the opponent
+func (g *Game) Draw() int {
+	return g.Opponent
+}
+
 func (g *Game) Part1() int {
-	score := LOSE
-	if g.You == g.Opponent {
-		score = DRAW
+	switch g.You {
+	case g.Lose():
+		return g.You + LOSE
+	case g.Draw():
+		return g.You + DRAW
+	default: // must be a win
+		return g.You + WIN
 	}
-	if (g.You == ROCK && g.Opponent == SCISSORS) ||
-		(g.You == SCISSORS && g.Opponent == PAPER) ||
-		(g.You == PAPER && g.Opponent == ROCK) {
-		score = WIN
-	}
-	return int(g.You) + score
 }
 
 func (g *Game) Part2() int {
-	switch g.Opponent {
-	case ROCK:
-		switch g.You {
-		case MUST_LOSE:
-			return SCISSORS + LOSE
-		case MUST_DRAW:
-			return ROCK + DRAW
-		default: // MUST_WIN
-			return PAPER + WIN
-		}
-	case PAPER:
-		switch g.You {
-		case MUST_LOSE:
-			return ROCK + LOSE
-		case MUST_DRAW:
-			return PAPER + DRAW
-		default: // MUST_WIN
-			return SCISSORS + WIN
-		}
-	default: // SCISSORS
-		switch g.You {
-		case MUST_LOSE:
-			return PAPER + LOSE
-		case MUST_DRAW:
-			return SCISSORS + DRAW
-		default: // MUST_WIN
-			return ROCK + WIN
-		}
+	switch g.You {
+	case MUST_LOSE:
+		return g.Lose() + LOSE
+	case MUST_DRAW:
+		return g.Draw() + DRAW
+	default: // must win
+		return g.Win() + WIN
 	}
 }
 
