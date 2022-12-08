@@ -125,5 +125,5 @@ func MaxScore(world World) int {
 func main() {
 	world := ReadInput(os.Args[1])
 	fmt.Printf("Solution 1: %d\n", FindHighPoints(world))
-	fmt.Printf("Solutuon 2: %d\n", MaxScore(world))
+	fmt.Printf("Solution 2: %d\n", MaxScore(world))
 }
