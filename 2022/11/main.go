@@ -9,184 +9,96 @@ import (
 	"strings"
 )
 
-const (
-	_ = iota
-	SELF
-	CONSTANT
-	ADD
-	MULTIPLY
-)
-
-type Test struct {
-	Divisor int
-	True    int
-	False   int
-}
-
-func (t *Test) Eval(n int) int {
-	if n%t.Divisor == 0 {
-		return t.True
-	} else {
-		return t.False
-	}
-}
-
-type Operation struct {
-	Operator    int
-	OperandType int
-	Operand     int
-}
-
-func (o *Operation) Eval(n int) int {
-	operand := 0
-	result := 0
-	switch o.OperandType {
-	case CONSTANT:
-		operand = o.Operand
-	default:
-		operand = n
-	}
-
-	switch o.Operator {
-	case ADD:
-		result = n + operand
-	default:
-		result = n * operand
-	}
-	return result
-}
-
 type Monkey struct {
-	Items       []int
-	Operation   Operation
-	Test        Test
-	Inspections int
+	Items   []int
+	Inspect func(n int) int
+	ThrowTo func(n int) int
 }
 
-func NewMonkey(o Operation, t Test) *Monkey {
-	m := &Monkey{Operation: o, Test: t, Inspections: 0}
-	m.Items = make([]int, 0)
-	return m
-}
-
-type Pack struct {
+type Game struct {
 	Monkeys []*Monkey
-	Mode    int
+	Worry   func(n int) int
 }
 
-func NewPack() *Pack {
-	p := &Pack{Mode: 1}
-	p.Monkeys = make([]*Monkey, 0)
-	return p
-}
+func (game *Game) Play(rounds int) int {
+	inspections := make([]int, len(game.Monkeys))
 
-func (p *Pack) PlayRound() {
-	lcm := 1
-	for _, m := range p.Monkeys {
-		lcm *= m.Test.Divisor
-	}
-	for _, m := range p.Monkeys {
-		for _, item := range m.Items {
-			new := m.Operation.Eval(item)
-			if p.Mode == 1 {
-				new /= 3
-			} else {
-				new %= lcm
+	for round := 0; round < rounds; round += 1 {
+		for i, monkey := range game.Monkeys {
+			for _, item := range monkey.Items {
+				item = monkey.Inspect(item)
+				item = game.Worry(item)
+				to := monkey.ThrowTo(item)
+				game.Monkeys[to].Items = append(game.Monkeys[to].Items, item)
+				inspections[i] += 1
 			}
-			to := m.Test.Eval(new)
-			p.Monkeys[to].Items = append(p.Monkeys[to].Items, new)
-			m.Inspections += 1
+			monkey.Items = []int{}
 		}
-		m.Items = []int{}
-	}
-}
-
-func (p *Pack) Print() {
-	for i, m := range p.Monkeys {
-		fmt.Printf("Monkey %d: %v\n", i, m.Items)
-	}
-}
-
-func (p *Pack) PrintInspections() {
-	for i, m := range p.Monkeys {
-		fmt.Printf("Monkey %d: %d\n", i, m.Inspections)
-	}
-}
-
-func (p *Pack) MostActive() int {
-	var inspections []int
-
-	for _, m := range p.Monkeys {
-		inspections = append(inspections, m.Inspections)
 	}
 
 	sort.Ints(inspections)
 	return inspections[len(inspections)-2] * inspections[len(inspections)-1]
 }
 
-func ReadInput(path string) *Pack {
+func ReadInput(path string) ([]*Monkey, int) {
 	buf, err := ioutil.ReadFile(path)
 	if err != nil {
 		panic(fmt.Sprintf("unable to read %s", path))
 	}
-	pack := NewPack()
+
+	var monkeys []*Monkey
+	lcm := 1
 
 	for _, chunk := range strings.Split(string(buf), "\n\n") {
-		lines := strings.Split(chunk, "\n")
+		var itemsStr, operator, target string
+		var index, divisor, toTrue, toFalse int
+		fmt.Sscanf(strings.ReplaceAll(chunk, ", ", ","), `Monkey %d:
+  Starting items: %s
+  Operation: new = old %s %s
+  Test: divisible by %d
+    If true: throw to monkey %d
+    If false: throw to monkey %d`, &index, &itemsStr, &operator, &target, &divisor, &toTrue, &toFalse)
 
-		fields := strings.Fields(lines[3])
-		testDivisor, _ := strconv.Atoi(fields[3])
-		fields = strings.Fields(lines[4])
-		testTrue, _ := strconv.Atoi(fields[5])
-		fields = strings.Fields(lines[5])
-		testFalse, _ := strconv.Atoi(fields[5])
-		test := Test{Divisor: testDivisor, True: testTrue, False: testFalse}
+		lcm *= divisor
 
-		var operation Operation
-		fields = strings.Fields(lines[2])
-		switch fields[4] {
-		case "*":
-			operation.Operator = MULTIPLY
-		case "+":
-			operation.Operator = ADD
-		}
-		switch fields[5] {
-		case "old":
-			operation.OperandType = SELF
-		default:
-			operation.OperandType = CONSTANT
-			i, _ := strconv.Atoi(fields[5])
-			operation.Operand = i
-		}
-
-		fields = strings.Fields(lines[1])
-		item_fields := strings.Split(strings.Join(fields[2:], ""), ",")
 		var items []int
-		for _, f := range item_fields {
-			i, _ := strconv.Atoi(f)
+		for _, item := range strings.Split(itemsStr, ",") {
+			i, _ := strconv.Atoi(item)
 			items = append(items, i)
 		}
 
-		monkey := NewMonkey(operation, test)
-		monkey.Items = items
+		test := func(n int) int {
+			if n%divisor == 0 {
+				return toTrue
+			}
+			return toFalse
+		}
 
-		pack.Monkeys = append(pack.Monkeys, monkey)
+		var op func(n int) int
+		switch target {
+		case "old":
+			op = func(n int) int { return n * n }
+		default:
+			o, _ := strconv.Atoi(target)
+			switch operator {
+			case "+":
+				op = func(n int) int { return n + o }
+			case "*":
+				op = func(n int) int { return n * o }
+			}
+		}
+
+		monkeys = append(monkeys, &Monkey{Inspect: op, ThrowTo: test, Items: items})
 	}
-
-	return pack
+	return monkeys, lcm
 }
 
 func main() {
-	pack := ReadInput(os.Args[1])
-	for i := 0; i < 20; i += 1 {
-		pack.PlayRound()
-	}
-	fmt.Printf("Solution 1: %d\n", pack.MostActive())
+	monkeys, _ := ReadInput(os.Args[1])
+	game1 := Game{Monkeys: monkeys, Worry: func(n int) int { return n / 3 }}
+	fmt.Printf("Solution 1: %d\n", game1.Play(20))
 
-	pack = ReadInput(os.Args[1])
-	pack.Mode = 2
-	for i := 0; i < 10000; i += 1 {
-		pack.PlayRound()
-	}
-	fmt.Printf("Solution 2: %d\n", pack.MostActive())
+	monkeys, lcm := ReadInput(os.Args[1])
+	game2 := Game{Monkeys: monkeys, Worry: func(n int) int { return n % lcm }}
+	fmt.Printf("Solution 2: %d\n", game2.Play(10000))
 }
