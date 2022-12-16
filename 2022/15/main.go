@@ -11,8 +11,13 @@ import (
 
 type Coordinate struct{ x, y int64 }
 
-func (c *Coordinate) Add(o Coordinate) Coordinate { return Coordinate{c.x + o.x, c.y + o.y} }
-func (c *Coordinate) IsValid() bool               { return c.x > 0 && c.x < 4_000_000 && c.y > 0 && c.y < 4_000_000 }
+func (c *Coordinate) Add(o Coordinate) Coordinate {
+	return Coordinate{c.x + o.x, c.y + o.y}
+}
+
+func (c *Coordinate) IsValid() bool {
+	return c.x > 0 && c.x < 4_000_000 && c.y > 0 && c.y < 4_000_000
+}
 
 type Sensor struct {
 	Location, Beacon Coordinate
@@ -21,8 +26,8 @@ type Sensor struct {
 
 // returns true if the sensor covers a particular row
 func (s *Sensor) CoversRow(row int64) bool {
-	top := s.Location.Add(Coordinate{0, -s.Distance})   // top coverage
-	bottom := s.Location.Add(Coordinate{0, s.Distance}) // bottom
+	top := s.Location.Add(Coordinate{0, -s.Distance})
+	bottom := s.Location.Add(Coordinate{0, s.Distance})
 	if top.y <= row && bottom.y >= row {
 		return true
 	}
@@ -78,7 +83,6 @@ func (rs Ranges) Count() int64 {
 		} else if r.Start <= last && r.End > last {
 			count += (r.End - last)
 			last = r.End
-		} else {
 		}
 	}
 	return count
@@ -109,14 +113,17 @@ func Abs(x int64) int64 {
 	return x
 }
 
-func ManhattanDistance(p1, p2 *Coordinate) int64 { return Abs(p1.x-p2.x) + Abs(p1.y-p2.y) }
+func ManhattanDistance(p1, p2 *Coordinate) int64 {
+	return Abs(p1.x-p2.x) + Abs(p1.y-p2.y)
+}
 
 func ReadInput(path string) []Sensor {
 	buf, _ := ioutil.ReadFile(path)
 	var sensors []Sensor
 	var sx, sy, bx, by int64
 	for _, line := range strings.Split(string(buf), "\n") {
-		fmt.Sscanf(line, "Sensor at x=%d, y=%d: closest beacon is at x=%d, y=%d", &sx, &sy, &bx, &by)
+		fmt.Sscanf(line, "Sensor at x=%d, y=%d: closest beacon is at x=%d, y=%d",
+			&sx, &sy, &bx, &by)
 		location, beacon := Coordinate{sx, sy}, Coordinate{bx, by}
 		sensor := NewSensor(location, beacon)
 		sensors = append(sensors, *sensor)
@@ -128,20 +135,21 @@ func main() {
 	sensors := ReadInput(os.Args[1])
 	row := int64(2_000_000)
 	ranges := make(Ranges, 0)
-	beacons_in_row := make(map[Coordinate]bool) // keep track of beacons in the given row
-	var descs []Line                            // lines that run diagonally descending left to right
-	var ascs []Line                             // lines that run diagonally ascending right to left
+	beacons_in_row := make(map[Coordinate]bool) // beacons in the given row
+	var descs []Line                            // lines that run descending left to right
+	var ascs []Line                             // lines that run ascending right to left
 	for _, sensor := range sensors {
-		if sensor.Beacon.y == row { // this sensor has a beacon in that row, record that
+		if sensor.Beacon.y == row {
 			beacons_in_row[sensor.Beacon] = true
 		}
-		if sensor.CoversRow(row) { // sensor covers the row, get the range of fields it covers
+		if sensor.CoversRow(row) {
 			start, end := sensor.CoveredRange(row)
 			ranges = append(ranges, Range{start, end})
 		}
-		e := sensor.EnvelopePoints() // get the corner points just outside the coverage
-		// create the four lines that circumscribe the sensors, split into the two
-		// sets of parallel lines
+		// get the corner points just outside the coverage
+		e := sensor.EnvelopePoints()
+		// create the four lines that circumscribe the sensors,
+		// split into the two sets of parallel lines
 		descs = append(descs, NewLine(e.Top, e.Right), NewLine(e.Left, e.Bottom))
 		ascs = append(ascs, NewLine(e.Top, e.Left), NewLine(e.Right, e.Bottom))
 	}
