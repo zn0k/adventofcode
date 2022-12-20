@@ -1,6 +1,7 @@
 package main
 
 import (
+	"container/list"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -8,59 +9,42 @@ import (
 	"strings"
 )
 
-type TwoDim struct {
-	a, b int
-}
-
 type Coordinate struct {
 	x, y, z int
 }
 
 type Tracker struct {
-	xs, ys, zs map[TwoDim]map[int]bool
+	m map[Coordinate]bool
 }
 
 func NewTracker() *Tracker {
 	t := &Tracker{}
-	t.xs = make(map[TwoDim]map[int]bool)
-	t.ys = make(map[TwoDim]map[int]bool)
-	t.zs = make(map[TwoDim]map[int]bool)
+	t.m = make(map[Coordinate]bool)
 	return t
 }
 
 func (t *Tracker) Add(c Coordinate) {
-	if _, ok := t.xs[TwoDim{c.y, c.z}]; !ok {
-		t.xs[TwoDim{c.y, c.z}] = make(map[int]bool)
-	}
-	t.xs[TwoDim{c.y, c.z}][c.x] = true
-	if _, ok := t.ys[TwoDim{c.x, c.z}]; !ok {
-		t.ys[TwoDim{c.x, c.z}] = make(map[int]bool)
-	}
-	t.ys[TwoDim{c.x, c.z}][c.y] = true
-	if _, ok := t.zs[TwoDim{c.x, c.y}]; !ok {
-		t.zs[TwoDim{c.x, c.y}] = make(map[int]bool)
-	}
-	t.zs[TwoDim{c.x, c.y}][c.z] = true
+	t.m[c] = true
 }
 
 func (t *Tracker) NeighborCount(c Coordinate) int {
 	count := 0
-	if _, ok := t.xs[TwoDim{c.y, c.z}][c.x+1]; ok {
+	if _, ok := t.m[Coordinate{c.x, c.y, c.z + 1}]; ok {
 		count += 1
 	}
-	if _, ok := t.xs[TwoDim{c.y, c.z}][c.x-1]; ok {
+	if _, ok := t.m[Coordinate{c.x, c.y, c.z - 1}]; ok {
 		count += 1
 	}
-	if _, ok := t.ys[TwoDim{c.x, c.z}][c.y+1]; ok {
+	if _, ok := t.m[Coordinate{c.x, c.y + 1, c.z}]; ok {
 		count += 1
 	}
-	if _, ok := t.ys[TwoDim{c.x, c.z}][c.y-1]; ok {
+	if _, ok := t.m[Coordinate{c.x, c.y - 1, c.z}]; ok {
 		count += 1
 	}
-	if _, ok := t.zs[TwoDim{c.x, c.y}][c.z+1]; ok {
+	if _, ok := t.m[Coordinate{c.x + 1, c.y, c.z}]; ok {
 		count += 1
 	}
-	if _, ok := t.zs[TwoDim{c.x, c.y}][c.z-1]; ok {
+	if _, ok := t.m[Coordinate{c.x - 1, c.y, c.z}]; ok {
 		count += 1
 	}
 	return count
@@ -91,6 +75,24 @@ func ReadInput(path string) (map[Coordinate]bool, Coordinate) {
 	return cubes, max
 }
 
+func GenerateNeighbor(c Coordinate, max Coordinate) []Coordinate {
+	neighbors := make([]Coordinate, 0)
+	for _, o := range []Coordinate{{0, 0, 1}, {0, 0, -1}, {0, 1, 0}, {0, -1, 0}, {1, 0, 0}, {-1, 0, 0}} {
+		candidate := Coordinate{c.x + o.x, c.y + o.y, c.z + o.z}
+		if candidate.x < 0 || candidate.x > max.x {
+			continue
+		}
+		if candidate.y < 0 || candidate.y > max.y {
+			continue
+		}
+		if candidate.z < 0 || candidate.z > max.z {
+			continue
+		}
+		neighbors = append(neighbors, candidate)
+	}
+	return neighbors
+}
+
 func main() {
 	cubes, max := ReadInput(os.Args[1])
 	tracker := NewTracker()
@@ -106,10 +108,47 @@ func main() {
 	part1 := (len(cubes) * 6) - neighbors
 	fmt.Printf("Solution 1: %d\n", part1)
 
-	// note for future me for part 2
-	// use the below to create a cube one bigger than the maxes below
-	fmt.Printf("%v\n", max)
-	// from there, pick a boundary air from the bottom back right, guaranteed to not be magma
-	// then run a DFS or BFS fill to find all neighbors that can be reached that are not magma
-	// then run through all of the air cubes and call NeighborCount, which should enumerate the solution
+	// BFS for air from the boundary in
+	max = Coordinate{max.x + 1, max.y + 1, max.z + 1}
+	air := make(map[Coordinate]bool)
+	q := list.New()
+	q.PushBack(max)
+	air[max] = true
+	for q.Front() != nil {
+		current := q.Front()
+		q.Remove(current)
+		for _, n := range GenerateNeighbor(current.Value.(Coordinate), max) {
+			if _, seen := air[n]; seen {
+				continue
+			}
+			if _, lava := tracker.m[n]; lava {
+				continue
+			}
+			air[n] = true
+			q.PushBack(n)
+		}
+	}
+
+	// get all trapped air (= all cubes not in lava or BFS filled air)
+	var trapped []Coordinate
+	for x := 0; x < max.x; x += 1 {
+		for y := 0; y < max.y; y += 1 {
+			for z := 0; z < max.z; z += 1 {
+				c := Coordinate{x, y, z}
+				if _, air := air[c]; air {
+					continue
+				}
+				if _, lava := tracker.m[c]; lava {
+					continue
+				}
+				trapped = append(trapped, c)
+			}
+		}
+	}
+	// count up the lava surfaces for trapped air, subtract it from part 1
+	inside := 0
+	for _, t := range trapped {
+		inside += tracker.NeighborCount(t)
+	}
+	fmt.Printf("Solution 2: %d\n", part1-inside)
 }
