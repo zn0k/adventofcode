@@ -159,7 +159,6 @@ func MovePlayer(p Player, m Move) Player {
 			newSurface = p.Surface
 			newDirection = p.Direction
 			if newPosition.y < 0 { // moving off surface up
-
 				newSurface = p.Surface.Top
 				newPosition.y = len(newSurface.Map) - 1
 			} else if newPosition.y >= len(p.Surface.Map) { // moving off surface down
@@ -188,21 +187,22 @@ func MovePlayerCube(p Player, m Move, ss []*Surface) Player {
 	case TURN:
 		switch m.Value {
 		case RIGHT:
+			fmt.Printf("player was facing %s, ", HumDir(p))
 			p.TurnRight()
+			fmt.Printf("turned right and is now facing %s\n", HumDir(p))
 		case LEFT:
+			fmt.Printf("player was facing %s ", HumDir(p))
 			p.TurnLeft()
+			fmt.Printf("turned left and is now facing %s\n", HumDir(p))
 		}
 	case WALK:
-		var offset Coordinate
-		var newPosition Coordinate
-		var newSurface *Surface
-		var newDirection int
 		for i := 0; i < m.Value; i += 1 {
-			offset = offsets[p.Direction]
-			newPosition = p.Position.Add(offset)
-			newSurface = p.Surface
-			newDirection = p.Direction
-			if newPosition.y < 0 { // moving off surface up
+			// calculate the proposed new position
+			newPosition := p.Position.Add(offsets[p.Direction])
+			newSurface := p.Surface
+			newDirection := p.Direction
+			// deal with movement between surfaces
+			if newPosition.y < 0 { // moving off surface going up
 				switch p.Surface.id {
 				case 0:
 					newSurface = ss[5]
@@ -234,7 +234,7 @@ func MovePlayerCube(p Player, m Move, ss []*Surface) Player {
 					newPosition.y = 0
 				case 1:
 					newSurface = ss[2]
-					newPosition.x = len(newSurface.Map[0]) - 1 // sus?
+					newPosition.x = len(newSurface.Map[0]) - 1
 					newPosition.y = p.Position.x
 					newDirection = LEFT
 				case 2:
@@ -245,7 +245,7 @@ func MovePlayerCube(p Player, m Move, ss []*Surface) Player {
 					newPosition.y = 0
 				case 4:
 					newSurface = ss[5]
-					newPosition.x = len(newSurface.Map[0]) - 1 // sus?
+					newPosition.x = len(newSurface.Map[0]) - 1
 					newPosition.y = p.Position.x
 					newDirection = LEFT
 				case 5:
@@ -257,7 +257,7 @@ func MovePlayerCube(p Player, m Move, ss []*Surface) Player {
 				case 0:
 					newSurface = ss[3]
 					newPosition.x = 0
-					newPosition.y = len(newSurface.Map) - 1 - p.Position.y // sus?
+					newPosition.y = len(newSurface.Map) - 1 - p.Position.y
 					newDirection = RIGHT
 				case 1:
 					newSurface = ss[0]
@@ -270,7 +270,7 @@ func MovePlayerCube(p Player, m Move, ss []*Surface) Player {
 				case 3:
 					newSurface = ss[0]
 					newPosition.x = 0
-					newPosition.y = len(newSurface.Map) - 1 - p.Position.y // sus?
+					newPosition.y = len(newSurface.Map) - 1 - p.Position.y
 					newDirection = RIGHT
 				case 4:
 					newSurface = ss[3]
@@ -312,11 +312,15 @@ func MovePlayerCube(p Player, m Move, ss []*Surface) Player {
 				}
 			}
 			if newSurface.Map[newPosition.y][newPosition.x] {
+				// new position is occupied by a wall, do not apply it
+				// and stop moving the player for the current move
 				break
+			} else {
+				// good to apply
+				p.Surface = newSurface
+				p.Position = newPosition
+				p.Direction = newDirection
 			}
-			p.Surface = newSurface
-			p.Position = newPosition
-			p.Direction = newDirection
 		}
 	}
 	return p
@@ -327,9 +331,13 @@ func MovePlayerCubeTest(p Player, m Move, ss []*Surface) Player {
 	case TURN:
 		switch m.Value {
 		case RIGHT:
+			fmt.Printf("player was facing %s, ", HumDir(p))
 			p.TurnRight()
+			fmt.Printf("turned right and is now facing %s\n", HumDir(p))
 		case LEFT:
+			fmt.Printf("player was facing %s ", HumDir(p))
 			p.TurnLeft()
+			fmt.Printf("turned left and is now facing %s\n", HumDir(p))
 		}
 	case WALK:
 		var offset Coordinate
@@ -460,6 +468,7 @@ func MovePlayerCubeTest(p Player, m Move, ss []*Surface) Player {
 			p.Surface = newSurface
 			p.Position = newPosition
 			p.Direction = newDirection
+			PrintPos(p)
 		}
 	}
 	return p
@@ -469,6 +478,27 @@ func Score(player Player) int {
 	row := player.Position.y + 1 + player.Surface.Score[0]
 	column := player.Position.x + 1 + player.Surface.Score[1]
 	return 1000*row + 4*column + player.Direction
+}
+
+func HumDir(player Player) string {
+	var d string
+	switch player.Direction {
+	case RIGHT:
+		d = "right"
+	case DOWN:
+		d = "down"
+	case LEFT:
+		d = "left"
+	case UP:
+		d = "up"
+	}
+	return d
+}
+
+func PrintPos(player Player) {
+	y := player.Position.y + 1 + player.Surface.Score[0]
+	x := player.Position.x + 1 + player.Surface.Score[1]
+	fmt.Printf("player is at (%d,%d) facing %s\n", x, y, HumDir(player))
 }
 
 func main() {
@@ -484,6 +514,7 @@ func main() {
 	player = Player{Position: Coordinate{0, 0}, Surface: surfaces[0], Direction: RIGHT}
 	for _, move := range moves {
 		player = MovePlayerCube(player, move, surfaces)
+		PrintPos(player)
 	}
 	fmt.Printf("Solution 2: %d\n", Score(player))
 }
