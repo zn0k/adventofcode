@@ -1,2 +1,4 @@
 *.out
 input.txt
+venv/
+template/
