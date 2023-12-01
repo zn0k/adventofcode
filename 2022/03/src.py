@@ -1,10 +1,7 @@
 #!/usr/bin/env python3
 
 with open("input.txt", "r") as f:
-    def divide(items):
-        half = len(items) // 2
-        return (items[0:half], items[half:].strip())
-    items = [divide(i) for i in f.readlines()]
+    items = [l.strip() for l in f.readlines()]
 
 def toNum(char):
     num = ord(char)
@@ -17,17 +14,16 @@ def toNum(char):
 
 total = 0
 for item in items:
-    common = set(item[0]) & set(item[1])
+    half = len(item) // 2
+    common = set(item[0:half]) & set(item[half:])
     for char in common:
         total += toNum(char)
 
 print(f"Solution 1: {total}")
 
 total = 0
-for i in range(0, len(items), 3):
-    common = set(items[i][0]) | set(items[i][1])
-    for j in [1, 2]:
-        common &= (set(items[i + j][0]) | set(items[i + j][1]))
+for group in zip(*[iter(items)] * 3):
+    common = set(group[0]) & set(group[1]) & set(group[2])
     for char in common:
         total += toNum(char)
 
