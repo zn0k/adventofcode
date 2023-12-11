@@ -8,7 +8,7 @@ with open(sys.argv[1], "r") as f:
 
 # track empty rows, columns, and galaxy coordinates
 empty_h = []
-empty_v = [False for _ in range(len(tiles))]
+empty_v = [False] * len(tiles)
 galaxies = set()
 
 for y in range(len(tiles)):
@@ -26,13 +26,11 @@ def md(a, b):
   return abs(a[0] - b[0]) + abs(a[1] - b[1])
 
 # number of empty horizontals and verticals between a and b
-# space expands by that much since each of those is doubled
+# space expands by that much since each of those is grown
 def expansion(a, b, factor):
-  ax, ay = a
-  bx, by = b
-  fst, snd = (ax, bx) if ax > bx else (bx, ax)
+  fst, snd = (a[0], b[0]) if a[0] > b[0] else (b[0], a[0])
   dv = len(list(filter(lambda x: fst > x > snd, empty_v))) * (factor - 1)
-  fst, snd = (ay, by) if ay > by else (by, ay)
+  fst, snd = (a[1], b[1]) if a[1] > b[1] else (b[1], a[1])
   dh = len(list(filter(lambda y: fst > y > snd, empty_h))) * (factor - 1)
   return dv + dh
 
