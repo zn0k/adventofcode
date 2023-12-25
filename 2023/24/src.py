@@ -35,14 +35,23 @@ for a, b in combinations(data, 2):
 
 print(f"Solution 1: {counter}")
 
-(ax, ay, az), (avx, avy, avz) = data[0]
-(bx, by, bz), (bvx, bvy, bvz) = data[1]
-(cx, cy, cz), (cvx, cvy, cvz) = data[2]
+# we need to find a total of 6 variables:
+# the starting coordinates (x, y, z)
+# the velocity on all three planes (vx, vy, vz)
+# these get combined with three time slots at which collisions happen (t1, t2, t3)
+# so 9 variables, which means we need 9 equations
 x, y, z = Reals("x y z")
 vx, vy, vz = Reals("vx vy vz")
 t1, t2, t3 = Reals("t1 t2 t3")
 s = Solver()
 
+# each hailstone can be used for 3 equations, one for each plane
+# so we need to pull out the first three hailstones
+(ax, ay, az), (avx, avy, avz) = data[0]
+(bx, by, bz), (bvx, bvy, bvz) = data[1]
+(cx, cy, cz), (cvx, cvy, cvz) = data[2]
+
+# simply write out equations for collisions in each plane
 equations = [
   x + t1 * vx == ax + t1 * avx,
   x + t2 * vx == bx + t2 * bvx,
@@ -55,8 +64,10 @@ equations = [
   z + t3 * vz == cz + t3 * cvz,
 ]
 
+# and solve
 s.add(*equations)
 if s.check() == sat:
   model = s.model()
+  # found it, pull out (x, y, z) and sum them
   solution2 = sum([model[var].as_long() for var in [x, y, z]])
   print(f"Solution 2: {solution2}")
