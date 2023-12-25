@@ -3,3 +3,4 @@ input.txt
 venv/
 template/
 .vscode
+.DS_Store
