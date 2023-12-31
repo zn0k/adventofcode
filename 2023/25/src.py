@@ -3,7 +3,6 @@
 import sys
 import networkx as nx
 from itertools import combinations
-from collections import Counter
 
 def get_graph(file):
   G = nx.Graph()
@@ -12,42 +11,21 @@ def get_graph(file):
       words = line.split()
       u = words[0].replace(":", "")
       for v in words[1:]:
-        G.add_edge(u, v)
+        # add a static capacity of 1 to each node
+        # that's because the minimum_cut function below requires capacity
+        G.add_edge(u, v, capacity=1.0)
   return G
 
 G = get_graph(sys.argv[1])
 
-# find all cut nodes with a cardinality of 3, and create a set from them
-# this works for the test data. it would work for the real input
-# but it doesn't finish in 45 minutes. sad panda.
-#cut_nodes = set([y for x in list(nx.all_node_cuts(G, 3)) for y in x])
-
-# alright, let's hack around that. the three edges we need to cut are choke points
-# so it follows that a lot of paths between nodes run through them
-# calculate all shortest paths between all pairs of nodes
-sps = list(nx.all_pairs_shortest_path(G))
-# create a long list that concatenates all shortest paths
-paths = []
-for _, ps in sps:
-  for _, p in ps.items():
-    paths += p
-# count how often each node appears in this list
-c = Counter(paths)
-# i'm confused by the official documentation and don't know if these 
-# counter objects are guaranteed to be ordered by occurence. 
-# do that explicitly
-cut_nodes = sorted([(v, k) for k, v in c.items()])[-6:]
-# get just the names of the nodes
-cut_nodes = list(map(lambda x: x[1], cut_nodes))
-
-# back to the regularly scheduled program. find all edge tuples of nodes
-edges = list(G.edges())
-# remove the edges between cut nodes, filtering for the ones that actually exist
-for a, b in combinations(cut_nodes, 2):
-  if (a, b) in edges or (b, a) in edges:
-    G.remove_edge(a, b)
-
-# grab the disconnected components
-components = list(nx.connected_components(G))
-
-print(f"Solution 1: {len(components[0]) * len(components[1])}")
+# periphery nodes are those with a distance equal to the diameter of the graph
+# these should be in the two partitions we want to form
+ps = list(nx.periphery(G))
+# but there could be more than one node in each partition, so pull out 
+# all nodes combined with the first one. compute the shortest path length between them
+ls = [(len(nx.shortest_path(G, c[0], c[1])), c) for c in combinations(ps, 2) if ps[0] in c]
+# pull out one of the longest path node pairs
+pair = sorted(ls)[-1][1]
+# use the max-flow min-cut theorem to partition the graph for that node pair
+_, partitions = nx.flow.minimum_cut(G, pair[0], pair[1])
+print(f"Solution 1: {len(partitions[0]) * len(partitions[1])}")
