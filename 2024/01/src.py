@@ -10,7 +10,6 @@ data = np.array([[int(x) for x in l.split()] for l in lines])
 
 left, right = sorted(data[:, 0]), sorted(data[:, 1])
 diffs = [abs(x[0] - x[1]) for x in zip(left, right)]
-#diffs = map(lambda x: abs(x[0] - x[1]), zip(left, right))
 print(f"Solution 1: {sum(diffs)}")
 
 c = Counter(right)
