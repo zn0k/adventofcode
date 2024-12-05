@@ -2,6 +2,8 @@
 
 import sys
 from itertools import repeat
+from collections import defaultdict
+from functools import cmp_to_key
 
 with open(sys.argv[1], "r") as f:
     rules, updates = f.read().split("\n\n")
@@ -29,32 +31,15 @@ def isValid(update):
 valid = [x[len(x) // 2] for x in filter(isValid, updates)]
 print(f"Solution 1: {sum(valid)}")
 
-
-# make a more correct version of the order of an update
-def shuffle(update):
-    # start with the first element in the update
-    new_order = [update[0]]
-    for page in update[1:]:
-        # find the rule that covers the new page and the last page in the new order
-        rule = [r for r in rules if page in r and new_order[-1] in r][0]
-        # depending on the rule, insert the new page just before the last page
-        # or append it
-        if page == rule[0]:
-            new_order = new_order[:-1] + [page] + [new_order[-1]]
-        else:
-            new_order = new_order + [page]
-    return new_order
-
-
-# keep shuffling the update until the order is valid
-def reorder(update):
-    while not (isValid(update)):
-        update = shuffle(update)
-    return update
-
+# create a lookup of what pages come after a specific one
+lookup_after = defaultdict(list)
+for l, r in rules:
+    lookup_after[l].append(r)
+# create a closure that acts as a cmp function for pages
+sort_pages = lambda x, y: -1 if y in lookup_after[x] else 1
 
 # pull out the invalid updates and re-order them
-invalid = [reorder(x) for x in updates if not (isValid(x))]
+invalid = [sorted(x, key=cmp_to_key(sort_pages)) for x in updates if not (isValid(x))]
 # pull out the middle pages
 invalid = [x[len(x) // 2] for x in invalid]
 print(f"Solution 2: {sum(invalid)}")
