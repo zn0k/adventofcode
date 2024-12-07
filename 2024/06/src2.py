@@ -20,9 +20,9 @@ while pos + direction in grid:
 print(f"Solution 1: {len(part1)}")
 
 loops = []
-for i in part1:
-    if grid[i] != ".": continue
-    grid[i] = "#"
+for tile in part1:
+    if grid[tile] != ".": continue
+    grid[tile] = "#"
     direction = 0 - 1j
     pos = start
     visited = set([(pos, direction)])
@@ -32,10 +32,10 @@ for i in part1:
         else:
             pos += direction # move
             if (pos, direction) in visited:
-                loops.append(i)
+                loops.append(tile)
                 break
             else:
                 visited.add((pos, direction))
-    grid[i] = "."
+    grid[tile] = "."
 
 print(f"Solution 2: {len(loops)}")
