@@ -45,41 +45,29 @@ def draw_graph(G):
     print("\n".join(farm))
 
 def sides(r):
-    draw_graph(r)
-    # create a new graph for the outside boundaries
-    outside = nx.Graph()
-    # step through each node and move it up/down/left/right
-    # those results that are now outside the original graph
-    # form boundaries
-    for n in r.nodes:
-        for dx, dy in [(1, 0), (0, 1), (-1, 0), (0, -1)]:
-            if (n[0] + dx, n[1] + dy) not in r.nodes:
-                outside.add_node((n[0] + dx, n[1] + dy))
-    # now connect the nodes in those boundaries into regions
-    for n in outside.nodes:
-        for dx, dy in [(1, 0), (0, 1), (-1, 0), (0, -1)]:
-            if (n[0] + dx, n[1] + dy) in outside.nodes:
-                outside.add_edge(n, (n[0] + dx, n[1] + dy))
-    # we only want single tiles or lines as boundary regions
-    regions = [outside.subgraph(c) for c in nx.connected_components(outside)]
-    for r in regions:
-        # check if the region has any horizontal edges
-        if any(u_y == v_y for (_, u_y), (_, v_y) in r.edges):
-            # it does, delete all the vertical edges in it
-            for u, v in [(u, v) for u, v in r.edges if u[0] == v[0]]:
-                outside.remove_edge(u, v)
-
-    # the number of sides is equal to the number of regions
-    # regions that are single tiles count for two sides
-    sides = [1 if len(c) > 1 else 2 for c in nx.connected_components(outside)]
-    print("\n")
-    draw_graph(outside)
-    return sum(sides)
-
-for r in regions:
-    area = len(r)
-    s = sides(r)
-    print(f"A region of plants with price {area} * {s} = {area * s}")
+    # the number of sides is equivalent to the number of corners in the region
+    corners = 0
+    # go through the tiles in the region
+    for (x, y) in r.nodes:
+        # determine whether their neighbors are set
+        up = (x, y - 1) in r.nodes
+        down = (x, y + 1) in r.nodes
+        left = (x - 1, y) in r.nodes
+        right = (x + 1, y) in r.nodes
+        upleft = (x - 1, y - 1) in r.nodes
+        downleft = (x - 1, y + 1) in r.nodes
+        upright = (x + 1, y - 1) in r.nodes
+        downright = (x + 1, y + 1) in r.nodes
+        # determine how many corners the tile contributes
+        if not up and not left: corners += 1
+        if not down and not left: corners += 1
+        if not up and not right: corners += 1
+        if not down and not right: corners += 1
+        if up and left and not upleft: corners += 1
+        if down and left and not downleft: corners += 1
+        if up and right and not upright: corners += 1
+        if down and right and not downright: corners += 1
+    return corners
 
 prices = [len(r) * sides(r) for r in regions]
 
