@@ -6,7 +6,7 @@ import networkx as nx
 with open(sys.argv[1], "r") as f: 
   input = [[c for c in l.strip()] for l in f.readlines()]
 
-maze = nx.Graph()
+maze = nx.DiGraph()
 start, end = None, None
 
 for y in range(len(input)):
