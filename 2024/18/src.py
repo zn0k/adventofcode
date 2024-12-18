@@ -36,13 +36,12 @@ print(f"Solution 1: {part1}")
 # drop bytes one by one
 # cache the current shortest path
 bp = nx.shortest_path(G, (0, 0), (d - 1, d - 1))
+# advance in time, adding falling bytes
 for i in range(limit, len(input)):
     x, y = input[i]
-    # find all edges leading in and out of that byte
-    edges = [(u, v) for u, v in G.edges if (x, y) == u or (x, y) == v]
-    for u, v in edges:
-        # remove those edges
-        G.remove_edge(u, v)
+    # remove the node that has a falling byte on it
+    if (x, y) in G.nodes:
+        G.remove_node((x, y))
     # check if we removed a node that is in the current best path
     # if it isn't we know we still have a path
     if (x, y) not in bp:
