@@ -37,12 +37,7 @@ rs = [[x % 10 for x in s] for s in secrets]
 # generate a list of deltas from value to value
 ds = [[b - a for a, b in zip(r, r[1:])] for r in rs]
 
-# generate a set of all sliding windows of 4 subsequent delta values
-seqs = set()
-for d in ds:
-    seqs.update(zip(d, d[1:], d[2:], d[3:]))
-
-# use a dictionary to sum up the bananas for each sequency
+# use a dictionary to sum up the bananas for each sequence
 part2 = defaultdict(int)
 # march through all the buyers
 for i in range(len(ds)):
@@ -54,6 +49,8 @@ for i in range(len(ds)):
         if seq in seen:
             continue
         # pull out the bananas we'd get for this sequence and tally it
+        # it's the same index + 4 due to the length of the sequence and the 
+        # one-off difference due to the deltas being one shorter
         part2[seq] += rs[i][j + 4]
         # remember the sequence
         seen.add(seq)
