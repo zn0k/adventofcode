@@ -14,14 +14,14 @@ for c in chunks:
     xs = list(map(int, re.findall(r"X=(\d+)", c)))
     ys = list(map(int, re.findall(r"Y=(\d+)", c)))
 
-    a = np.array([[xs[0], xs[1]], [ys[0], ys[1]]])
+    A = np.array([[xs[0], xs[1]], [ys[0], ys[1]]])
     b = np.array([xs[2], ys[2]])
-    x = list(map(np.round, np.linalg.solve(a, b)))
-    if np.allclose(np.dot(a, x), b):
+    x = list(map(np.round, np.linalg.solve(A, b)))
+    if np.allclose(np.dot(A, x), b):
         part1 += x[0] * 3 + x[1]
 
     b = np.array([xs[2] + 10000000000000, ys[2] + 10000000000000])
-    x = np.linalg.solve(a, b)
+    x = np.linalg.solve(A, b)
     if all(np.abs(x - x.round().astype(int)) < 0.01):
         part2 += x[0] * 3 + x[1]
 
