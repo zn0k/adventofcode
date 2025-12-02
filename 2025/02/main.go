@@ -19,31 +19,36 @@ func check(e error) {
 func part1(s string) bool {
 	// find the half way mark of the string
 	half := len(s) / 2
-	// repeat it twice
-	repeated := strings.Repeat(s[:half], 2)
-	// is it the original string
-	if repeated == s {
-		return true
-	}
-	return false
+	// repeat it twice, see if it's the original
+	return strings.Repeat(s[:half], len(s)/2) == s
 }
 
 // decide if a number is invalid for part 2
 func part2(s string) bool {
-	// find the half way mark of the string
+	// find length of the original string
+	n := len(s)
+	// and the halfway mark
 	half := len(s) / 2
 	// move up from one character to half of the string
-	for i := 1; i <= half; i++ {
-		// get the substring up to that character
-		sub := s[:i]
-		// does it evenly fit into the length of the original string
-		if len(s)%len(sub) == 0 {
-			// repeat it as many times as needed to make it fit
-			repeated := strings.Repeat(sub, len(s)/len(sub))
-			// are they the same
-			if repeated == s {
-				return true
+	for size := 1; size <= half; size++ {
+		// if this size doesn't evenly sit, bail
+		if n%size != 0 {
+			continue
+		}
+		ok := true
+		// go through the remainder of the string, past
+		// the first bit we're trying to find repeats for
+		for i := size; i < n; i++ {
+			// check if the current character matches the
+			// relevant spot in the substring we're repeating
+			if s[i] != s[i%size] {
+				ok = false
+				break
 			}
+		}
+		if ok {
+			// string is invalid
+			return true
 		}
 	}
 	return false
@@ -54,13 +59,13 @@ func main() {
 	input, err := os.ReadFile("input.txt")
 	check(err)
 	// get the ID ranges by splitting on commas
-	ranges := strings.Split(string(input), ",")
+	ranges := strings.Split(strings.TrimSpace(string(input)), ",")
 	solution1 := 0
 	solution2 := 0
 	// loop through the ID ranges
-	for i := 0; i < len(ranges); i++ {
+	for _, r := range ranges {
 		// get the beginning and end number
-		vals := strings.Split(ranges[i], "-")
+		vals := strings.Split(r, "-")
 		// they're strings, convert to integers
 		start, err := strconv.Atoi(vals[0])
 		check(err)
