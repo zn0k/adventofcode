@@ -4,3 +4,4 @@ venv/
 template/
 .vscode
 .DS_Store
+main
