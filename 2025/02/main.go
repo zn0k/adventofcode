@@ -17,10 +17,17 @@ func check(e error) {
 
 // decide if a number is invalid for part 1
 func part1(s string) bool {
-	// find the half way mark of the string
-	half := len(s) / 2
-	// repeat it twice, see if it's the original
-	return strings.Repeat(s[:half], len(s)/2) == s
+	n := len(s)
+	if n%2 != 0 {
+		return false
+	}
+	half := n / 2
+	for i := 0; i < half; i++ {
+		if s[i] != s[i+half] {
+			return false
+		}
+	}
+	return true
 }
 
 // decide if a number is invalid for part 2
