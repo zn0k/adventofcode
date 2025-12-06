@@ -2,7 +2,7 @@
 
 import sys
 import numpy as np
-from operator import mul, add
+import operator as op
 from functools import reduce
 
 # read in homework as strings, transposed
@@ -17,10 +17,10 @@ homework = homework[:, :-1].astype(int)
 
 # helper functions to reduce lists of integers
 # using multiplication and addition
-reduce_mul = lambda x: reduce(mul, x, 1)
-reduce_add = lambda x: reduce(add, x, 0)
+mul = lambda x: reduce(op.mul, x, 1)
+add = lambda x: reduce(op.add, x, 0)
 # map the operators to those functions
-operators = [reduce_mul if x == "*" else reduce_add for x in operators]
+operators = [mul if x == "*" else add for x in operators]
 
 # combine the data with the operator function
 combined = [(operators[i], homework[i]) for i in range(len(homework))]
