@@ -23,14 +23,14 @@ def in_range(i):
 solution1 = sum(map(in_range, ingredients))
 print(f"Solution 1: {solution1}")
 
-# sort the ranges by starting number
+# merge them so there are no overlaps. bog standard algorithm
+# first, sort the ranges by starting number
 ranges = sorted(ranges, key=lambda x: x[0])
-# merge them so there are no overlaps
 merged = []
 for r in ranges:
     # if the list of merged ranges is empty or the
     # current range doesn't overlap with the last
-    # element, simply add it
+    # element, simply add it as a new range
     if not merged or r[0] > merged[-1][1]:
         merged.append(r)
     else:
