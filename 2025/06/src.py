@@ -20,14 +20,14 @@ homework = homework[:, :-1].astype(int)
 reduce_mul = lambda x: reduce(mul, x, 1)
 reduce_add = lambda x: reduce(add, x, 0)
 # map the operators to those functions
-operators = list(map(lambda x: reduce_mul if x == "*" else reduce_add, operators))
+operators = [reduce_mul if x == "*" else reduce_add for x in operators]
 
 # combine the data with the operator function
 combined = [(operators[i], homework[i]) for i in range(len(homework))]
 #[(reduce_mul, [123, 45, 6]), (reduce_add, [328, 64, 98]), ...]
 
 # and apply the reducer to the list, sum to solve
-solution1 = sum(map(lambda x: x[0](x[1]), combined))
+solution1 = sum(x[0](x[1]) for x in combined)
 print(f"Solution 1: {solution1}")
 
 # lol, what even is this for part 2. columns aren't even aligned the same way
@@ -38,9 +38,8 @@ with open(sys.argv[1], "r") as f:
     ops_line = lines[-1]
 
 # get the column start indices from the line with the operators
-idx = [i for i in range(len(ops_line)) if ops_line[i] != " "]
 # add the length of a homework line
-idx.append(len(homework[0]) + 1)
+idx = [i for i in range(len(ops_line)) if ops_line[i] != " "] + [len(homework[0]) + 1]
 idx = list(zip(idx, idx[1:]))
 # [(0, 4), (4, 8), (8, 12), ...]
 # these are now the ranges for each column regardless of alignment
@@ -53,7 +52,7 @@ def extract(line, idx):
         numbers.append(sub)
     return numbers
 
-homework = list(map(lambda x: extract(x, idx), homework))
+homework = [extract(x, idx) for x in homework]
 # [['123', '328', '051', '640'], ['045', '640', '387', '230'], ...]
 
 # transpose to group the columns
@@ -72,5 +71,5 @@ combined = [(operators[i], homework[i]) for i in range(len(homework))]
 #[(reduce_mul, [1, 24, 356]), (reduce_add, [369, 248, 8]]), ...]
 
 # and apply the reducer to the list, sum to solve
-solution2 = sum(map(lambda x: x[0](x[1]), combined))
+solution2 = sum(x[0](x[1]) for x in combined)
 print(f"Solution 2: {solution2}")
